@@ -1,0 +1,145 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Helper function pour vérifier si l'utilisateur est authentifié
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    // Helper function pour vérifier si l'utilisateur est le propriétaire
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    // Helper function pour obtenir le rôle depuis les custom claims
+    function getUserRole() {
+      return request.auth.token.role;
+    }
+
+    // Helper function pour vérifier si l'utilisateur est admin
+    function isAdmin() {
+      return isAuthenticated() && getUserRole() == 'admin';
+    }
+
+    // Helper function pour vérifier si l'utilisateur est trainer ou admin
+    function isTrainerOrAdmin() {
+      return isAuthenticated() && (getUserRole() == 'trainer' || getUserRole() == 'admin');
+    }
+
+    // Helper function pour vérifier si un utilisateur est inscrit à un cours
+    function isEnrolled(courseId) {
+      return isAuthenticated();
+    }
+
+    // Collection users
+    match /users/{userId} {
+      allow read, write: if isOwner(userId);
+      allow read: if isTrainerOrAdmin();
+    }
+
+    // Collection courses
+    match /courses/{courseId} {
+      allow read: if isAuthenticated() && (
+        isTrainerOrAdmin() ||
+        resource.data.ownerId == request.auth.uid ||
+        request.auth.uid in resource.data.assignedTrainerIds ||
+        resource.data.status == 'published'
+      );
+      allow create: if isAuthenticated() && (
+        request.resource.data.ownerId == request.auth.uid ||
+        isAdmin()
+      );
+      allow update, delete: if isAuthenticated() && (
+        resource.data.ownerId == request.auth.uid ||
+        request.auth.uid in resource.data.assignedTrainerIds ||
+        isAdmin()
+      );
+      match /modules/{moduleId} {
+        allow read: if isAuthenticated() && (
+          isTrainerOrAdmin() ||
+          get(/databases/$(database)/documents/courses/$(courseId)).data.ownerId == request.auth.uid ||
+          request.auth.uid in get(/databases/$(database)/documents/courses/$(courseId)).data.assignedTrainerIds ||
+          get(/databases/$(database)/documents/courses/$(courseId)).data.status == 'published'
+        );
+        allow write: if isAuthenticated() && (
+          get(/databases/$(database)/documents/courses/$(courseId)).data.ownerId == request.auth.uid ||
+          request.auth.uid in get(/databases/$(database)/documents/courses/$(courseId)).data.assignedTrainerIds ||
+          isAdmin()
+        );
+      }
+      match /resources/{resourceId} {
+        allow read: if isAuthenticated() && (
+          isTrainerOrAdmin() ||
+          get(/databases/$(database)/documents/courses/$(courseId)).data.ownerId == request.auth.uid ||
+          request.auth.uid in get(/databases/$(database)/documents/courses/$(courseId)).data.assignedTrainerIds ||
+          get(/databases/$(database)/documents/courses/$(courseId)).data.status == 'published'
+        );
+        allow write: if isAuthenticated() && (
+          get(/databases/$(database)/documents/courses/$(courseId)).data.ownerId == request.auth.uid ||
+          request.auth.uid in get(/databases/$(database)/documents/courses/$(courseId)).data.assignedTrainerIds ||
+          isAdmin()
+        );
+      }
+    }
+
+    // Collection enrollments
+    match /enrollments/{enrollmentId} {
+      allow read: if isAuthenticated() && (
+        resource.data.userId == request.auth.uid ||
+        isTrainerOrAdmin()
+      );
+      allow write: if false;
+    }
+
+    // Collection progress
+    match /progress/{progressId} {
+      allow read: if isAuthenticated() && (
+        resource.data.userId == request.auth.uid ||
+        isTrainerOrAdmin()
+      );
+      allow write: if isAuthenticated() && resource.data.userId == request.auth.uid;
+    }
+
+    // Collection threads
+    match /threads/{threadId} {
+      allow read: if isAuthenticated() && (
+        resource.data.learnerId == request.auth.uid ||
+        resource.data.trainerId == request.auth.uid ||
+        isAdmin()
+      );
+      allow create: if isAuthenticated() &&
+        request.resource.data.learnerId == request.auth.uid;
+      match /messages/{messageId} {
+        allow read: if isAuthenticated() && (
+          get(/databases/$(database)/documents/threads/$(threadId)).data.learnerId == request.auth.uid ||
+          get(/databases/$(database)/documents/threads/$(threadId)).data.trainerId == request.auth.uid ||
+          isAdmin()
+        );
+        allow create: if isAuthenticated() && (
+          get(/databases/$(database)/documents/threads/$(threadId)).data.learnerId == request.auth.uid ||
+          get(/databases/$(database)/documents/threads/$(threadId)).data.trainerId == request.auth.uid
+        );
+      }
+    }
+
+    // Collection certificates
+    match /certificates/{certificateId} {
+      allow read: if isAuthenticated() && (
+        resource.data.userId == request.auth.uid ||
+        isTrainerOrAdmin()
+      );
+      allow write: if false;
+    }
+
+    // Collection auditLogs
+    match /auditLogs/{logId} {
+      allow read: if isAdmin();
+      allow write: if false;
+    }
+
+    // SnapClean AI : images générées (accès ouvert pour dev)
+    match /generated_images/{document} {
+      allow read, write: if true;
+    }
+  }
+}

@@ -1,0 +1,7 @@
+{
+  "name": "SnapClean: AI Product Photo Studio",
+  "description": "Professional product photo editing using natural language commands. Remove backgrounds, clean up distractions, and enhance lighting instantly.",
+  "requestFramePermissions": [
+    "camera"
+  ]
+}

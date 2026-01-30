@@ -1,0 +1,51 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    function getUserRole() {
+      return request.auth.token.role;
+    }
+    function isAdmin() {
+      return isAuthenticated() && getUserRole() == 'admin';
+    }
+    function isTrainerOrAdmin() {
+      return isAuthenticated() && (getUserRole() == 'trainer' || getUserRole() == 'admin');
+    }
+
+    match /courses/{courseId}/resources/{resourceId}/{fileName} {
+      allow read: if isAuthenticated();
+      allow write: if isTrainerOrAdmin();
+    }
+
+    match /certificates/{certificateId}/{fileName} {
+      allow read: if isAuthenticated();
+      allow write: if false;
+    }
+
+    match /profile-photos/{userId}/{fileName} {
+      allow read: if isAuthenticated() && (userId == request.auth.uid || isAdmin());
+      allow write: if isAuthenticated() && (userId == request.auth.uid || isAdmin());
+    }
+
+    match /users/{userId}/profile/{fileName} {
+      allow read: if isAuthenticated() && (userId == request.auth.uid || isAdmin());
+      allow write: if isAuthenticated() && userId == request.auth.uid;
+    }
+
+    match /referentiels/{fileName} {
+      allow read: if isAdmin();
+      allow write: if isAdmin();
+    }
+
+    // SnapClean AI : images générées (accès ouvert pour dev)
+    match /generated/{allPaths=**} {
+      allow read, write: if true;
+    }
+
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}
