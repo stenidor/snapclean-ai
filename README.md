@@ -14,7 +14,7 @@ View your app in AI Studio: https://ai.studio/apps/drive/1DhkExINcq4pl7IzD9MybJe
 
 1. Install dependencies: `npm install`
 2. Copy [.env.example](.env.example) to `.env.local` and fill:
-   - `GEMINI_API_KEY` – clé API Gemini
+   - `GEMINI_API_KEY` – clé API Gemini (côté serveur uniquement, jamais exposée)
    - `VITE_FIREBASE_*` – config Firebase (Storage + Firestore)
 3. Run: `npm run dev`
 
@@ -24,7 +24,7 @@ View your app in AI Studio: https://ai.studio/apps/drive/1DhkExINcq4pl7IzD9MybJe
 2. In **Project → Settings → Environment Variables**, add:
    - **GEMINI_API_KEY** (build + preview + production)
    - **VITE_FIREBASE_API_KEY**, **VITE_FIREBASE_AUTH_DOMAIN**, **VITE_FIREBASE_PROJECT_ID**, **VITE_FIREBASE_STORAGE_BUCKET**, **VITE_FIREBASE_MESSAGING_SENDER_ID**, **VITE_FIREBASE_APP_ID** (build + preview + production)
-3. Deploy. The app will build with `vite build` and serve from `dist`.
+3. Deploy. The app will build with `vite build` and serve from `dist`. La clé Gemini reste côté serveur (API route `/api/edit-image`).
 
 ## Firebase
 
