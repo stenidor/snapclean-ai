@@ -50,9 +50,12 @@ const App: React.FC = () => {
     }
   };
 
+  const buildPrompt = (metier: string) =>
+    `la personne devient ${metier}, imagine une scene cool`;
+
   const handleEdit = async (customPrompt?: string) => {
-    const activePrompt = customPrompt || prompt;
-    if (!originalImage || !activePrompt.trim()) return;
+    const activePrompt = customPrompt ?? buildPrompt(prompt.trim());
+    if (!originalImage || (!customPrompt && !prompt.trim())) return;
 
     setStatus(AppStatus.PROCESSING);
     setErrorMessage(null);
@@ -337,7 +340,7 @@ const App: React.FC = () => {
                 value={prompt}
                 onChange={(e) => setPrompt(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && handleEdit()}
-                placeholder="Décrivez la modification souhaitée..."
+                placeholder="Ex : médecin, militaire, pompier..."
                 className="bg-transparent text-white placeholder:text-slate-500 border-none outline-none w-full text-sm py-2"
                 disabled={status === AppStatus.PROCESSING}
               />
