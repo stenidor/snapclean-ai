@@ -1,5 +1,6 @@
 
 import React, { useState, useRef, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { AppStatus, EditedImage } from './types';
 import { editImage } from './services/geminiService';
 import { uploadGeneratedImage } from './services/storageService';
@@ -25,6 +26,7 @@ const SUGGESTED_PROMPTS = [
 ];
 
 const App: React.FC = () => {
+  const navigate = useNavigate();
   const [status, setStatus] = useState<AppStatus>(AppStatus.IDLE);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [originalImage, setOriginalImage] = useState<string | null>(null);
@@ -149,6 +151,16 @@ const App: React.FC = () => {
             <img src={logo} alt="IA Occitanie" className="h-10 w-auto" />
           </div>
           <div className="flex items-center gap-4">
+            <button
+                onClick={() => navigate('/feed')}
+                className="text-sm font-medium text-slate-300 hover:text-white transition-colors flex items-center gap-1.5"
+                title="Voir le mur d'images"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
+                </svg>
+                Mur
+              </button>
             {originalImage && (
               <button 
                 onClick={clearApp}
