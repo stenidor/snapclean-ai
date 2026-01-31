@@ -1,8 +1,9 @@
 
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { AppStatus, EditedImage } from './types';
 import { editImage } from './services/geminiService';
 import { uploadGeneratedImage } from './services/storageService';
+import { loadHistory, saveHistory } from './services/historyStorage';
 import logo from './Logo.png';
 import { 
   CloudArrowUpIcon, 
@@ -34,8 +35,21 @@ const App: React.FC = () => {
   const [savedToStorage, setSavedToStorage] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [history, setHistory] = useState<EditedImage[]>([]);
-  
+  const historyLoadedRef = useRef(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    loadHistory().then((data) => {
+      setHistory(data);
+      historyLoadedRef.current = true;
+    });
+  }, []);
+
+  useEffect(() => {
+    if (historyLoadedRef.current) {
+      saveHistory(history);
+    }
+  }, [history]);
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
