@@ -17,7 +17,7 @@ function getApp(): FirebaseApp {
   if (!app) {
     const hasConfig = firebaseConfig.apiKey && firebaseConfig.projectId && firebaseConfig.storageBucket;
     if (!hasConfig) {
-      throw new Error('Firebase config missing. Add VITE_FIREBASE_* vars in .env.local and Vercel.');
+      throw new Error('Configuration Firebase manquante. Ajoutez les variables VITE_FIREBASE_* (Vercel → Settings → Environment Variables) puis redéployez.');
     }
     app = initializeApp(firebaseConfig);
   }

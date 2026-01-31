@@ -29,7 +29,9 @@ const App: React.FC = () => {
   const [editedImage, setEditedImage] = useState<string | null>(null);
   const [prompt, setPrompt] = useState('');
   const [currentEditPrompt, setCurrentEditPrompt] = useState<string>('');
+  const [currentEditId, setCurrentEditId] = useState<string | null>(null);
   const [savedToStorage, setSavedToStorage] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
   const [history, setHistory] = useState<EditedImage[]>([]);
   
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -68,6 +70,7 @@ const App: React.FC = () => {
         timestamp: Date.now(),
       };
 
+      setCurrentEditId(newEntry.id);
       setHistory(prev => [newEntry, ...prev]);
       setStatus(AppStatus.IDLE);
     } catch (err: any) {
@@ -81,7 +84,9 @@ const App: React.FC = () => {
     setEditedImage(null);
     setPrompt('');
     setCurrentEditPrompt('');
+    setCurrentEditId(null);
     setSavedToStorage(false);
+    setSaveError(null);
     setErrorMessage(null);
     setStatus(AppStatus.IDLE);
     if (fileInputRef.current) fileInputRef.current.value = '';
@@ -90,20 +95,22 @@ const App: React.FC = () => {
   const handleAcceptAndSave = async () => {
     if (!editedImage || !currentEditPrompt) return;
     setStatus(AppStatus.SAVING);
-    setErrorMessage(null);
+    setSaveError(null);
     try {
       const meta = await uploadGeneratedImage(editedImage, currentEditPrompt);
       setSavedToStorage(true);
-      setHistory(prev =>
-        prev.map((e, i) =>
-          i === 0 ? { ...e, firebaseUrl: meta.imageUrl } : e
-        )
-      );
+      const targetId = currentEditId ?? history[0]?.id;
+      if (targetId) {
+        setHistory(prev =>
+          prev.map((e) => (e.id === targetId ? { ...e, firebaseUrl: meta.imageUrl } : e))
+        );
+      }
       setStatus(AppStatus.IDLE);
     } catch (err: unknown) {
+      console.error('Firebase save error:', err);
       const msg = err instanceof Error ? err.message : 'Échec de l\'enregistrement';
-      setErrorMessage(msg);
-      setStatus(AppStatus.ERROR);
+      setSaveError(msg);
+      setStatus(AppStatus.IDLE);
     }
   };
 
@@ -252,7 +259,9 @@ const App: React.FC = () => {
                         onClick={() => {
                           setEditedImage(item.editedUrl);
                           setCurrentEditPrompt(item.prompt);
+                          setCurrentEditId(item.id);
                           setSavedToStorage(!!item.firebaseUrl);
+                          setSaveError(null);
                         }}
                       >
                         <img src={item.editedUrl} alt="History item" className="w-full h-full object-cover" />
@@ -268,8 +277,11 @@ const App: React.FC = () => {
                                 try {
                                   const meta = await uploadGeneratedImage(item.editedUrl, item.prompt);
                                   setHistory(prev => prev.map(e => e.id === item.id ? { ...e, firebaseUrl: meta.imageUrl } : e));
+                                  if (currentEditId === item.id) setSavedToStorage(true);
                                   setStatus(AppStatus.IDLE);
-                                } catch {
+                                } catch (err) {
+                                  console.error('Firebase save error:', err);
+                                  setSaveError(err instanceof Error ? err.message : 'Échec de l\'enregistrement');
                                   setStatus(AppStatus.IDLE);
                                 }
                               }}
@@ -306,6 +318,19 @@ const App: React.FC = () => {
       {/* Floating Control Bar */}
       {originalImage && (
         <div className="fixed bottom-8 left-1/2 -translate-x-1/2 w-full max-w-2xl px-4 z-50">
+          {saveError && (
+            <div className="mb-2 bg-red-500/90 text-white text-sm px-4 py-2 rounded-xl flex items-center gap-2">
+              <ExclamationCircleIcon className="w-5 h-5 flex-shrink-0" />
+              <span>{saveError}</span>
+              <button
+                onClick={() => setSaveError(null)}
+                className="ml-auto text-white/80 hover:text-white"
+                aria-label="Fermer"
+              >
+                ×
+              </button>
+            </div>
+          )}
           <div className="bg-slate-900/90 backdrop-blur-xl border border-white/10 rounded-2xl shadow-2xl p-2 flex items-center gap-2">
             <div className="flex-1 flex items-center px-4">
               <SparklesIcon className="w-5 h-5 text-indigo-400 mr-3" />
