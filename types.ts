@@ -13,5 +13,6 @@ export enum AppStatus {
   IDLE = 'IDLE',
   UPLOADING = 'UPLOADING',
   PROCESSING = 'PROCESSING',
+  SAVING = 'SAVING',
   ERROR = 'ERROR'
 }

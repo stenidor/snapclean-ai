@@ -9,7 +9,8 @@ import {
   TrashIcon, 
   ArrowDownTrayIcon,
   ExclamationCircleIcon,
-  ArrowPathIcon
+  ArrowPathIcon,
+  CheckIcon
 } from '@heroicons/react/24/outline';
 
 const SUGGESTED_PROMPTS = [
@@ -27,6 +28,8 @@ const App: React.FC = () => {
   const [originalImage, setOriginalImage] = useState<string | null>(null);
   const [editedImage, setEditedImage] = useState<string | null>(null);
   const [prompt, setPrompt] = useState('');
+  const [currentEditPrompt, setCurrentEditPrompt] = useState<string>('');
+  const [savedToStorage, setSavedToStorage] = useState(false);
   const [history, setHistory] = useState<EditedImage[]>([]);
   
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -54,6 +57,8 @@ const App: React.FC = () => {
     try {
       const result = await editImage(originalImage, activePrompt);
       setEditedImage(result);
+      setCurrentEditPrompt(activePrompt);
+      setSavedToStorage(false);
 
       const newEntry: EditedImage = {
         id: Date.now().toString(),
@@ -65,16 +70,6 @@ const App: React.FC = () => {
 
       setHistory(prev => [newEntry, ...prev]);
       setStatus(AppStatus.IDLE);
-
-      uploadGeneratedImage(result, activePrompt)
-        .then((meta) => {
-          setHistory(prev =>
-            prev.map((e) =>
-              e.id === newEntry.id ? { ...e, firebaseUrl: meta.imageUrl } : e
-            )
-          );
-        })
-        .catch((err) => console.warn('Firebase save skipped:', err?.message || err));
     } catch (err: any) {
       setErrorMessage(err.message || "Failed to process image. Please try again.");
       setStatus(AppStatus.ERROR);
@@ -85,9 +80,31 @@ const App: React.FC = () => {
     setOriginalImage(null);
     setEditedImage(null);
     setPrompt('');
+    setCurrentEditPrompt('');
+    setSavedToStorage(false);
     setErrorMessage(null);
     setStatus(AppStatus.IDLE);
     if (fileInputRef.current) fileInputRef.current.value = '';
+  };
+
+  const handleAcceptAndSave = async () => {
+    if (!editedImage || !currentEditPrompt) return;
+    setStatus(AppStatus.SAVING);
+    setErrorMessage(null);
+    try {
+      const meta = await uploadGeneratedImage(editedImage, currentEditPrompt);
+      setSavedToStorage(true);
+      setHistory(prev =>
+        prev.map((e, i) =>
+          i === 0 ? { ...e, firebaseUrl: meta.imageUrl } : e
+        )
+      );
+      setStatus(AppStatus.IDLE);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Échec de l\'enregistrement';
+      setErrorMessage(msg);
+      setStatus(AppStatus.ERROR);
+    }
   };
 
   const downloadImage = () => {
@@ -230,13 +247,40 @@ const App: React.FC = () => {
                 <div className="space-y-4 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
                   {history.map((item) => (
                     <div key={item.id} className="group relative flex gap-3 p-2 rounded-xl hover:bg-slate-50 transition-colors">
-                      <div className="w-16 h-16 bg-slate-100 rounded-lg flex-shrink-0 overflow-hidden cursor-pointer" onClick={() => setEditedImage(item.editedUrl)}>
+                      <div 
+                        className="w-16 h-16 bg-slate-100 rounded-lg flex-shrink-0 overflow-hidden cursor-pointer" 
+                        onClick={() => {
+                          setEditedImage(item.editedUrl);
+                          setCurrentEditPrompt(item.prompt);
+                          setSavedToStorage(!!item.firebaseUrl);
+                        }}
+                      >
                         <img src={item.editedUrl} alt="History item" className="w-full h-full object-cover" />
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className="text-xs font-medium text-slate-700 truncate">{item.prompt}</p>
                         <p className="text-[10px] text-slate-400 mt-1">{new Date(item.timestamp).toLocaleTimeString()}</p>
-                        <div className="flex gap-2 mt-2">
+                        <div className="flex gap-2 mt-2 flex-wrap">
+                          {!item.firebaseUrl ? (
+                            <button 
+                              onClick={async () => {
+                                setStatus(AppStatus.SAVING);
+                                try {
+                                  const meta = await uploadGeneratedImage(item.editedUrl, item.prompt);
+                                  setHistory(prev => prev.map(e => e.id === item.id ? { ...e, firebaseUrl: meta.imageUrl } : e));
+                                  setStatus(AppStatus.IDLE);
+                                } catch {
+                                  setStatus(AppStatus.IDLE);
+                                }
+                              }}
+                              disabled={status === AppStatus.SAVING}
+                              className="text-[10px] text-emerald-600 hover:underline disabled:opacity-50"
+                            >
+                              Accepter
+                            </button>
+                          ) : (
+                            <span className="text-[10px] text-slate-400">Enregistré</span>
+                          )}
                           <button 
                             onClick={() => {
                               const link = document.createElement('a');
@@ -246,7 +290,7 @@ const App: React.FC = () => {
                             }}
                             className="text-[10px] text-indigo-600 hover:underline"
                           >
-                            Download
+                            Télécharger
                           </button>
                         </div>
                       </div>
@@ -278,13 +322,31 @@ const App: React.FC = () => {
             
             <div className="flex items-center gap-1.5 border-l border-white/10 pl-2 pr-1">
               {editedImage ? (
-                <button
-                  onClick={downloadImage}
-                  className="bg-indigo-600 hover:bg-indigo-500 text-white h-10 px-4 rounded-xl flex items-center gap-2 transition-all font-medium text-sm"
-                >
-                  <ArrowDownTrayIcon className="w-4 h-4" />
-                  <span className="hidden sm:inline">Save</span>
-                </button>
+                <>
+                  <button
+                    onClick={handleAcceptAndSave}
+                    disabled={savedToStorage || status === AppStatus.SAVING}
+                    className="bg-emerald-600 hover:bg-emerald-500 disabled:bg-slate-700 disabled:opacity-70 text-white h-10 px-4 rounded-xl flex items-center gap-2 transition-all font-medium text-sm"
+                  >
+                    {status === AppStatus.SAVING ? (
+                      <ArrowPathIcon className="w-4 h-4 animate-spin" />
+                    ) : savedToStorage ? (
+                      <CheckIcon className="w-4 h-4" />
+                    ) : (
+                      <CheckIcon className="w-4 h-4" />
+                    )}
+                    <span className="hidden sm:inline">
+                      {savedToStorage ? 'Enregistré' : status === AppStatus.SAVING ? 'Enregistrement…' : 'Accepter'}
+                    </span>
+                  </button>
+                  <button
+                    onClick={downloadImage}
+                    className="w-10 h-10 flex items-center justify-center text-slate-400 hover:text-white hover:bg-white/10 rounded-xl transition-all"
+                    title="Télécharger"
+                  >
+                    <ArrowDownTrayIcon className="w-5 h-5" />
+                  </button>
+                </>
               ) : (
                 <button
                   onClick={() => handleEdit()}
