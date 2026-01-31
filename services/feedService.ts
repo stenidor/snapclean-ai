@@ -5,7 +5,7 @@ import {
   limit,
   startAfter,
   getDocs,
-  type DocumentSnapshot,
+  onSnapshot,
   type QueryDocumentSnapshot,
 } from 'firebase/firestore';
 import { getFirebaseFirestore } from './firebase';
@@ -19,7 +19,20 @@ export interface FeedImage {
 
 let lastDoc: QueryDocumentSnapshot | null = null;
 
-export async function fetchFeedImages(count: number = 20): Promise<FeedImage[]> {
+function docToImage(doc: QueryDocumentSnapshot): FeedImage {
+  const d = doc.data();
+  const createdAt = d.createdAt?.toMillis?.() ?? Date.now();
+  return {
+    id: doc.id,
+    imageUrl: d.imageUrl ?? '',
+    prompt: d.prompt ?? '',
+    createdAt,
+  };
+}
+
+export async function fetchFeedImages(count: number = 20, reset = false): Promise<FeedImage[]> {
+  if (reset) lastDoc = null;
+
   const db = getFirebaseFirestore();
   const coll = collection(db, 'generated_images');
 
@@ -43,15 +56,24 @@ export async function fetchFeedImages(count: number = 20): Promise<FeedImage[]> 
     lastDoc = snapshot.docs[snapshot.docs.length - 1];
   }
 
-  return snapshot.docs.map((doc) => {
-    const d = doc.data();
-    const createdAt = d.createdAt?.toMillis?.() ?? Date.now();
-    return {
-      id: doc.id,
-      imageUrl: d.imageUrl ?? '',
-      prompt: d.prompt ?? '',
-      createdAt,
-    };
+  return snapshot.docs.map(docToImage);
+}
+
+export function subscribeToFeedImages(
+  count: number,
+  onUpdate: (images: FeedImage[]) => void
+): () => void {
+  const db = getFirebaseFirestore();
+  const coll = collection(db, 'generated_images');
+  const q = query(
+    coll,
+    orderBy('createdAt', 'desc'),
+    limit(count)
+  );
+
+  return onSnapshot(q, (snapshot) => {
+    const images = snapshot.docs.map(docToImage);
+    onUpdate(images);
   });
 }
 

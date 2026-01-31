@@ -1,86 +1,38 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { fetchFeedImages, type FeedImage } from './services/feedService';
+import React, { useState, useEffect, useCallback } from 'react';
+import { subscribeToFeedImages, type FeedImage } from './services/feedService';
 import { ArrowLeftIcon } from '@heroicons/react/24/outline';
 
-const GRID_SIZE = 5;
+const GRID_SIZE = 6;
 const TICK_INTERVAL_MS = 10000;
+const SUBSCRIPTION_LIMIT = 100;
 
 export const FeedPage: React.FC<{ onBack: () => void }> = ({ onBack }) => {
-  const [heroImage, setHeroImage] = useState<FeedImage | null>(null);
-  const [gridImages, setGridImages] = useState<FeedImage[]>([]);
+  const [allImages, setAllImages] = useState<FeedImage[]>([]);
+  const [currentIndex, setCurrentIndex] = useState(0);
   const [isTransitioning, setIsTransitioning] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const imageQueueRef = useRef<FeedImage[]>([]);
-  const tickRef = useRef<ReturnType<typeof setInterval> | null>(null);
-
-  const loadMoreImages = useCallback(async () => {
-    try {
-      const images = await fetchFeedImages(30);
-      if (images.length > 0) {
-        imageQueueRef.current = [...imageQueueRef.current, ...images];
-      }
-    } catch (err) {
-      console.error('Feed load error:', err);
-      setError(err instanceof Error ? err.message : 'Erreur de chargement');
-    }
-  }, []);
-
-  const popNextImage = useCallback((): FeedImage | null => {
-    if (imageQueueRef.current.length === 0) return null;
-    const next = imageQueueRef.current.shift()!;
-    if (imageQueueRef.current.length < 10) {
-      loadMoreImages();
-    }
-    return next;
-  }, [loadMoreImages]);
 
   const advanceSlide = useCallback(() => {
-    setGridImages((prev) => {
-      if (prev.length === 0) return prev;
-      const nextHero = prev[0];
-      const rest = prev.slice(1);
-      const newFromQueue = popNextImage();
-      const newGrid = newFromQueue ? [...rest, newFromQueue] : rest;
-
-      setTimeout(() => {
-        setIsTransitioning(true);
-        setHeroImage(nextHero);
-        setTimeout(() => setIsTransitioning(false), 500);
-      }, 0);
-
-      return newGrid;
-    });
-  }, [popNextImage]);
-
-  useEffect(() => {
-    let mounted = true;
-    (async () => {
-      try {
-        const images = await fetchFeedImages(30);
-        if (!mounted) return;
-        if (images.length === 0) {
-          setError('Aucune image validée pour le moment');
-          return;
-        }
-        const hero = images[0];
-        const grid = images.slice(1, 1 + GRID_SIZE);
-        imageQueueRef.current = images.slice(1 + GRID_SIZE);
-        setHeroImage(hero);
-        setGridImages(grid);
-      } catch (err) {
-        if (mounted) {
-          setError(err instanceof Error ? err.message : 'Erreur de chargement');
-        }
-      }
-    })();
-    return () => { mounted = false; };
+    setCurrentIndex((prev) => prev + 1);
+    setIsTransitioning(true);
+    setTimeout(() => setIsTransitioning(false), 500);
   }, []);
 
   useEffect(() => {
-    tickRef.current = setInterval(advanceSlide, TICK_INTERVAL_MS);
-    return () => {
-      if (tickRef.current) clearInterval(tickRef.current);
-    };
+    const unsubscribe = subscribeToFeedImages(SUBSCRIPTION_LIMIT, (images) => {
+      if (images.length === 0) {
+        setError('Aucune image validée pour le moment');
+        return;
+      }
+      setError(null);
+      setAllImages(images);
+    });
+    return unsubscribe;
+  }, []);
+
+  useEffect(() => {
+    const tick = setInterval(advanceSlide, TICK_INTERVAL_MS);
+    return () => clearInterval(tick);
   }, [advanceSlide]);
 
   if (error) {
@@ -98,6 +50,14 @@ export const FeedPage: React.FC<{ onBack: () => void }> = ({ onBack }) => {
     );
   }
 
+  const n = allImages.length;
+  const heroImage = n > 0 ? allImages[currentIndex % n] : null;
+  const gridImages = n > 1
+    ? Array.from({ length: Math.min(GRID_SIZE, n) }, (_, i) =>
+        allImages[(currentIndex + 1 + i) % n]
+      )
+    : [];
+
   return (
     <div className="fixed inset-0 w-screen h-screen bg-black overflow-hidden flex" style={{ width: '100vw', height: '100vh' }}>
       <button
@@ -112,7 +72,7 @@ export const FeedPage: React.FC<{ onBack: () => void }> = ({ onBack }) => {
       <div className="flex flex-1 min-w-0" style={{ width: '100%', height: '100%' }}>
         {/* Zone Principale - Hero (66%) */}
         <div
-          className="flex-shrink-0 bg-slate-900 flex items-center justify-center overflow-hidden"
+          className="flex-shrink-0 bg-slate-900 flex flex-col items-center justify-center overflow-hidden relative"
           style={{ width: '66%' }}
         >
           {heroImage && (
@@ -123,29 +83,28 @@ export const FeedPage: React.FC<{ onBack: () => void }> = ({ onBack }) => {
               className={`w-full h-full object-cover transition-opacity duration-500 ${isTransitioning ? 'opacity-0' : 'opacity-100'}`}
             />
           )}
+          <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent py-6 px-8">
+            <h2 className="text-white text-2xl font-bold">Le métier de votre rêve</h2>
+          </div>
         </div>
 
-        {/* Zone Feed - Grille (33%) */}
+        {/* Zone Feed - Grille (33%) - pas de cases vides, ratio préservé */}
         <div
           className="flex-shrink-0 flex flex-col gap-2 p-2 bg-slate-950 overflow-hidden"
           style={{ width: '33%', height: '100%' }}
         >
-          {Array.from({ length: GRID_SIZE }).map((_, i) => {
-            const img = gridImages[i];
-            if (!img) return <div key={`empty-${i}`} className="flex-1 min-h-0 rounded-lg bg-slate-800/50" />;
-            return (
+          {gridImages.map((img, i) => (
             <div
               key={`${img.id}-${i}`}
-              className="flex-1 min-h-0 rounded-lg overflow-hidden bg-slate-800"
+              className="flex-1 min-h-0 rounded-lg overflow-hidden bg-slate-800 flex items-center justify-center"
             >
               <img
                 src={img.imageUrl}
                 alt={img.prompt}
-                className="w-full h-full object-cover"
+                className="max-w-full max-h-full object-contain"
               />
             </div>
-          );
-          })}
+          ))}
         </div>
       </div>
     </div>
