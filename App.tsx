@@ -14,12 +14,12 @@ import {
 } from '@heroicons/react/24/outline';
 
 const SUGGESTED_PROMPTS = [
-  "Remove background and make it pure white",
-  "Add a cinematic moody lighting",
-  "Place the product on a luxury marble table",
-  "Clean up background distractions",
-  "Add a soft golden hour filter",
-  "Make it look like a high-end catalog shot"
+  "Supprimer le fond et le rendre blanc pur",
+  "Ajouter un éclairage cinématographique atmosphérique",
+  "Placer le produit sur une table en marbre de luxe",
+  "Nettoyer les distractions en arrière-plan",
+  "Ajouter un filtre doux d'heure dorée",
+  "Donner l'apparence d'un shooting catalogue haut de gamme"
 ];
 
 const App: React.FC = () => {
@@ -74,7 +74,7 @@ const App: React.FC = () => {
       setHistory(prev => [newEntry, ...prev]);
       setStatus(AppStatus.IDLE);
     } catch (err: any) {
-      setErrorMessage(err.message || "Failed to process image. Please try again.");
+      setErrorMessage(err.message || "Échec du traitement. Veuillez réessayer.");
       setStatus(AppStatus.ERROR);
     }
   };
@@ -131,7 +131,7 @@ const App: React.FC = () => {
             <div className="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center">
               <SparklesIcon className="w-5 h-5 text-white" />
             </div>
-            <h1 className="text-xl font-bold tracking-tight text-slate-800">SnapClean<span className="text-indigo-600">AI</span></h1>
+            <h1 className="text-xl font-bold tracking-tight text-slate-800">AI <span className="text-indigo-600">Occitanie</span></h1>
           </div>
           <div className="flex items-center gap-4">
             {originalImage && (
@@ -139,7 +139,7 @@ const App: React.FC = () => {
                 onClick={clearApp}
                 className="text-sm font-medium text-slate-500 hover:text-slate-800 transition-colors"
               >
-                Reset Studio
+                Réinitialiser
               </button>
             )}
           </div>
@@ -166,10 +166,10 @@ const App: React.FC = () => {
                 <div className="mx-auto w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
                   <CloudArrowUpIcon className="w-8 h-8 text-slate-400 group-hover:text-indigo-600" />
                 </div>
-                <h2 className="text-2xl font-semibold text-slate-800 mb-2">Upload your product photo</h2>
-                <p className="text-slate-500 max-w-sm mx-auto mb-6">Drag and drop or click to browse. Best results with clear product shots.</p>
+                <h2 className="text-2xl font-semibold text-slate-800 mb-2">Téléversez votre photo produit</h2>
+                <p className="text-slate-500 max-w-sm mx-auto mb-6">Glissez-déposez ou cliquez pour parcourir. Meilleurs résultats avec des photos produit nettes.</p>
                 <button className="bg-indigo-600 hover:bg-indigo-700 text-white px-8 py-3 rounded-xl font-medium shadow-lg shadow-indigo-200 transition-all">
-                  Choose Image
+                  Choisir une image
                 </button>
               </div>
             ) : (
@@ -178,14 +178,14 @@ const App: React.FC = () => {
                   {!editedImage ? (
                     <img 
                       src={originalImage} 
-                      alt="Original" 
+                      alt="Originale" 
                       className="max-w-full max-h-full object-contain rounded-xl shadow-xl"
                     />
                   ) : (
                     <div className="relative w-full h-full flex items-center justify-center">
                       <img 
                         src={editedImage} 
-                        alt="Edited" 
+                        alt="Modifiée" 
                         className="max-w-full max-h-full object-contain rounded-xl shadow-xl animate-in fade-in duration-500"
                       />
                       <button 
@@ -193,7 +193,7 @@ const App: React.FC = () => {
                         className="absolute top-4 left-4 bg-white/90 backdrop-blur shadow-md px-3 py-1.5 rounded-full text-xs font-semibold text-indigo-600 hover:bg-white transition-all flex items-center gap-1.5"
                       >
                         <ArrowPathIcon className="w-3.5 h-3.5" />
-                        Show Original
+                        Voir l'original
                       </button>
                     </div>
                   )}
@@ -201,8 +201,8 @@ const App: React.FC = () => {
                   {status === AppStatus.PROCESSING && (
                     <div className="absolute inset-0 bg-white/60 backdrop-blur-sm flex flex-col items-center justify-center p-6 text-center">
                       <div className="w-12 h-12 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin mb-4"></div>
-                      <h3 className="text-lg font-bold text-slate-800">Magically editing...</h3>
-                      <p className="text-sm text-slate-600 mt-2">Gemini is re-imagining your photo based on your request.</p>
+                      <h3 className="text-lg font-bold text-slate-800">Édition en cours...</h3>
+                      <p className="text-sm text-slate-600 mt-2">L'IA retravaille votre photo selon votre demande.</p>
                     </div>
                   )}
                 </div>
@@ -214,7 +214,7 @@ const App: React.FC = () => {
               <div className="bg-red-50 border border-red-100 rounded-2xl p-4 flex items-start gap-3">
                 <ExclamationCircleIcon className="w-5 h-5 text-red-500 mt-0.5" />
                 <div>
-                  <h4 className="font-semibold text-red-800">Editing Failed</h4>
+                  <h4 className="font-semibold text-red-800">Édition échouée</h4>
                   <p className="text-sm text-red-700">{errorMessage}</p>
                 </div>
               </div>
@@ -226,7 +226,7 @@ const App: React.FC = () => {
             <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-sm">
               <h3 className="font-bold text-slate-800 mb-4 flex items-center gap-2">
                 <SparklesIcon className="w-5 h-5 text-indigo-500" />
-                Quick Actions
+                Actions rapides
               </h3>
               <div className="flex flex-wrap gap-2">
                 {SUGGESTED_PROMPTS.map((p) => (
@@ -248,8 +248,8 @@ const App: React.FC = () => {
             {history.length > 0 && (
               <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-sm">
                 <div className="flex items-center justify-between mb-4">
-                  <h3 className="font-bold text-slate-800">Session History</h3>
-                  <button onClick={() => setHistory([])} className="text-xs text-slate-400 hover:text-red-500">Clear All</button>
+                  <h3 className="font-bold text-slate-800">Historique de la session</h3>
+                  <button onClick={() => setHistory([])} className="text-xs text-slate-400 hover:text-red-500">Tout effacer</button>
                 </div>
                 <div className="space-y-4 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
                   {history.map((item) => (
@@ -264,7 +264,7 @@ const App: React.FC = () => {
                           setSaveError(null);
                         }}
                       >
-                        <img src={item.editedUrl} alt="History item" className="w-full h-full object-cover" />
+                        <img src={item.editedUrl} alt="Élément de l'historique" className="w-full h-full object-cover" />
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className="text-xs font-medium text-slate-700 truncate">{item.prompt}</p>
@@ -339,7 +339,7 @@ const App: React.FC = () => {
                 value={prompt}
                 onChange={(e) => setPrompt(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && handleEdit()}
-                placeholder="Type your editing instruction..."
+                placeholder="Décrivez la modification souhaitée..."
                 className="bg-transparent text-white placeholder:text-slate-500 border-none outline-none w-full text-sm py-2"
                 disabled={status === AppStatus.PROCESSING}
               />
@@ -383,7 +383,7 @@ const App: React.FC = () => {
                   ) : (
                     <>
                       <SparklesIcon className="w-4 h-4" />
-                      Apply
+                      Appliquer
                     </>
                   )}
                 </button>
@@ -392,7 +392,7 @@ const App: React.FC = () => {
               <button 
                 onClick={clearApp}
                 className="w-10 h-10 flex items-center justify-center text-slate-400 hover:text-white hover:bg-white/10 rounded-xl transition-all"
-                title="Discard current edit"
+                title="Abandonner la modification"
               >
                 <TrashIcon className="w-5 h-5" />
               </button>
